@@ -113,8 +113,10 @@ function [relabel_img, num_labels] = relabelComponents(label_img)
         relabel_img(label_img == unique_labels(i)) = i;
     end
 end
-
 function crack_detection_pipeline(image_paths, ground_truth_paths)
+    % Define a fixed size for all images
+    fixed_size = [256, 256]; % Example size, change as needed
+    
     num_images = length(image_paths);
     num_train_images = 1; % Adjust this number as needed
     num_test_images = num_images - num_train_images;
@@ -128,6 +130,10 @@ function crack_detection_pipeline(image_paths, ground_truth_paths)
         image_input = imread(image_paths{i});
         ground_truth = imread(ground_truth_paths{i});
         
+        % Resize images to fixed size
+        image_input = imresize(image_input, fixed_size);
+        ground_truth = imresize(ground_truth, fixed_size);
+        
         preproc_image = preprocessing(image_input);
         binaryimage = imageThresholding(preproc_image);
         morph_image = imageMorphology(binaryimage);
@@ -136,6 +142,8 @@ function crack_detection_pipeline(image_paths, ground_truth_paths)
         % Extract features and labels from training images
         [fvs, lbls] = extract_features(labeled_img, ground_truth, preproc_image);
         feature_vectors = [feature_vectors; fvs];
+        feature_vectors = normalize(feature_vectors);
+
         labels = [labels; lbls];
     end
     
@@ -144,18 +152,24 @@ function crack_detection_pipeline(image_paths, ground_truth_paths)
     
     % Test on the remaining images
     for i = num_train_images+1:num_images
-        image_input = imread(image_paths{i}); % Corrected: Use current image path
+        image_input = imread(image_paths{i});
         ground_truth = imread(ground_truth_paths{i});
+        
+        % Resize images to fixed size
+        image_input = imresize(image_input, fixed_size);
+        ground_truth = imresize(ground_truth, fixed_size);
         
         preproc_image = preprocessing(image_input);
         binaryimage = imageThresholding(preproc_image);
         morph_image = imageMorphology(binaryimage);
+        thinned_image = imageThinning(morph_image);
         labeled_img = ConnectedComponentAnalysis(morph_image);
-        
+        %crack_lengths = crackLengths(thinned_image);
         % Extract features from the test image
-        ground_truth = imresize(ground_truth, size(labeled_img));
         [fvs, lbls] = extract_features(labeled_img, ground_truth, preproc_image);
-       
+        
+        fvs = normalize(fvs);
+        
         % Make predictions
         predictedLabels = predict(svm_model, fvs);
         
@@ -167,46 +181,8 @@ function crack_detection_pipeline(image_paths, ground_truth_paths)
         disp(['IoU for Crack on Image ', num2str(i), ': ', num2str(iouCrack)]);
     end
 end
-function [feature_vectors, labels] = extract_features(label_matrix, ground_truth, preproc_image)
-    stats = regionprops(label_matrix, preproc_image, 'Area', 'Perimeter', 'Eccentricity', ...
-        'MajorAxisLength', 'MinorAxisLength', 'ConvexArea');
-    
-    feature_vectors = [];
-    labels = [];
-    
-    for i = 1:max(label_matrix(:))
-        % Extract features
-        area = stats(i).Area;
-        perimeter = stats(i).Perimeter;
-        eccentricity = stats(i).Eccentricity;
-        circularity = (4 * pi * area) / (perimeter^2);
-        aspect_ratio = stats(i).MajorAxisLength / stats(i).MinorAxisLength;
-        solidity = area / stats(i).ConvexArea;
-        
-        % Create a feature vector for this region
-        feature_vector = [area, perimeter, eccentricity, circularity, aspect_ratio, solidity];
-        feature_vectors = [feature_vectors; feature_vector];
-        
-        % Determine label based on ground truth overlap
-        region_mask = (label_matrix == i);
-        disp(['Size of region_mask: ', num2str(size(region_mask))]);
-        region_area_ground_truth = sum(ground_truth(region_mask));
-        disp(['Size of ground_truth: ', num2str(size(ground_truth))]);
-        if region_area_ground_truth > 0
-            label = 1; % For crack
-        else
-            label = 0; % No crack
-        end
-        
-        labels = [labels; label];
-    end
-    
-    % Check if both classes (1 and 0) are present in the labels
-    if length(unique(labels)) < 2
-        error('Both classes (crack and no-crack) must be present in the labels.');
-    end
-end
-function accuracy_svm = svm_classifier(feature_vectors, labels)
+
+function svm_model = svm_classifier(feature_vectors, labels)
     % Ensure the labels array is not empty and contains both classes
     if isempty(labels)
         error('The labels array is empty.');
@@ -235,39 +211,100 @@ function accuracy_svm = svm_classifier(feature_vectors, labels)
     feature_vectors = feature_vectors(:, ~zero_variance_mask);
     
     % Split the data into training and testing sets
-    split_ratio = 0.8;
-    x = randperm(length(labels));
-    num_train_samples = round(split_ratio * length(labels));
     
-    % Partition the data into training and testing sets
-    train_data = feature_vectors(x(1:num_train_samples), :);
-    train_labels = labels(x(1:num_train_samples));
+    svm_model = fitcsvm(feature_vectors, labels, 'KernelFunction', 'linear');
     
-    test_data = feature_vectors(x(num_train_samples + 1:end), :);
-    test_labels = labels(x(num_train_samples + 1:end));
     
-    % Train the SVM model directly on the unscaled data
-    svm_model = fitcsvm(train_data, train_labels, 'KernelFunction', 'linear');
-    
-    % Make predictions on the test data
-    predictions_svm = predict(svm_model, test_data);
-    
-    % Calculate the accuracy of the model on the test data
-    correct_predictions_svm = sum(predictions_svm == test_labels);
-    total_samples_svm = length(test_labels);
-    accuracy_svm = correct_predictions_svm / total_samples_svm;
-    
-    % Display the test accuracy
-    fprintf('Test Accuracy using SVM without scaling: %.2f%%\n', accuracy_svm * 100);
 end
-function iouCrack = calculate_iou(ground_truth, finalBinaryImage)
+function [feature_vectors, labels] = extract_features(label_matrix, ground_truth, preproc_image)
+    % Convert ground truth to grayscale if it's an RGB image
+    if size(ground_truth, 3) == 3
+        ground_truth = rgb2gray(ground_truth);
+    end
+    
+    % Convert ground truth to binary image (if needed)
+    ground_truth = imbinarize(ground_truth);
+    
+    stats = regionprops(label_matrix, preproc_image, 'Area', 'Perimeter', 'Eccentricity', ...
+        'MajorAxisLength', 'MinorAxisLength', 'ConvexArea');
+    
+    feature_vectors = [];
+    labels = [];
+    
+    for i = 1:max(label_matrix(:))
+        % Extract features
+        area = stats(i).Area;
+        perimeter = stats(i).Perimeter;
+        eccentricity = stats(i).Eccentricity;
+        circularity = (4 * pi * area) / (perimeter^2);
+        aspect_ratio = stats(i).MajorAxisLength / stats(i).MinorAxisLength;
+        solidity = area / stats(i).ConvexArea;
+        
+        % Create a feature vector for this region
+        feature_vector = [area, perimeter, eccentricity, circularity, aspect_ratio, solidity];
+        feature_vectors = [feature_vectors; feature_vector];
+        
+        % Determine label based on ground truth overlap
+        region_mask = (label_matrix == i);
+        %disp(['Size of region_mask: ', num2str(size(region_mask))]);
+        region_area_ground_truth = sum(ground_truth(region_mask));  % Ground truth is now binary
+       % disp(['Size of ground_truth: ', num2str(size(ground_truth))]);
+        
+        if region_area_ground_truth > 0
+            label = 1; % For crack
+        else
+            label = 0; % No crack
+        end
+        
+        labels = [labels; label];
+    end
+    
+    % Check if both classes (1 and 0) are present in the labels
+    if length(unique(labels)) < 2
+        error('Both classes (crack and no-crack) must be present in the labels.');
+    end
+end
 
+function iouCrack = calculate_iou(ground_truth, finalBinaryImage)
+    fixed_size = [256, 256];
+    if size(ground_truth, 3) == 3
+        ground_truth = rgb2gray(ground_truth);
+    end
+    
+    % Convert ground truth to binary
     ground_truth_bw = imbinarize(ground_truth);
 
-    ground_truth_resized = imresize(ground_truth_bw, size(finalBinaryImage)); 
-    
-    intersectionCrack = sum(ground_truth_resized(:) & finalBinaryImage(:));
-    unionCrack = sum(ground_truth_resized(:) | finalBinaryImage(:)); 
-    
+    finalBinaryImage = imbinarize(finalBinaryImage);
+    finalBinaryImage_b = imresize(finalBinaryImage,fixed_size ); 
+    size(ground_truth_bw)
+    size(finalBinaryImage_b)
+    intersectionCrack = sum(ground_truth_bw(:) & finalBinaryImage_b(:));
+    unionCrack = sum(ground_truth_bw(:) | finalBinaryImage_b(:)); 
+    crack_lengths = crackLengths(finalBinaryImage_b);
     iouCrack = intersectionCrack / unionCrack;
 end
+function thinned_image = imageThinning(binary_image)
+    % Perform thinning to reduce the segmentation result to a line-like representation
+    thinned_image = bwmorph(binary_image, 'thin', inf);
+    figure;
+    imshow(thinned_image);
+    title('Thinned Image');
+end
+function crack_lengths = crackLengths(thinned_image)
+    % Compute the length of each detected crack
+    stats = regionprops(thinned_image, 'PixelIdxList');
+    crack_lengths = zeros(length(stats), 1);
+    
+    for i = 1:length(stats)
+        pixel_indices = stats(i).PixelIdxList;
+        [rows, cols] = ind2sub(size(thinned_image), pixel_indices);
+        % Compute the length of the crack using the pixel indices
+        crack_lengths(i) = sum(sqrt(diff(rows).^2 + diff(cols).^2));
+    end
+    
+    % Display the lengths
+    for i = 1:length(crack_lengths)
+        fprintf('Crack %d Length: %.2f pixels\n', i, crack_lengths(i));
+    end
+end
+
