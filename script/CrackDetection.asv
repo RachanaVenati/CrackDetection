@@ -2,18 +2,16 @@ function CrackDetection
 clc;
 clear all;
 close all;
-image_input=imread("/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/test_images/crack_10.jpg");%reading image input
-rotate_Flip_ContrastShrunk_Brightness_Shifted(image_input)
+image_input=imread("/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_3.jpeg");%reading image input
 preproc_image=preprocessing(image_input);%preprocessing for contrast streching.
 binaryimage=imageThresholding(preproc_image);%task 2a)adaptive thresholding (binary image).
 morph_image=imageMorphology(binaryimage);
 labeled_img=ConnectedComponentAnalysis(morph_image);
-
 image_paths = {
     '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_1.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_3.jpeg'
 };
 ground_truth_paths = {
-    '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_1.png', '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_3.png'
+    '/Users/rachanavenatiicloud.com/Downloads/ram1/SegmentationClass/crack_1.png', '/Users/rachanavenatiicloud.com/Downloads/ram/SegmentationObject/crack_3.png'
 };
 
 crack_detection_pipeline(image_paths,ground_truth_paths);
@@ -306,23 +304,23 @@ function crack_lengths = crackLengths(thinned_image)
     end
 end
 function rotate_Flip_ContrastShrunk_Brightness_Shifted(image_to_be_modified)
-folder = '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/Rotated_flipped_contrasted_images';
+folder = 'C:/path_to_save_folder/';
 % Rotate the image by 45 degrees
-rotated_image = imrotate(image_to_be_modified, 45);
-FileName = fullfile(folder, 'rotated_image_10.jpg');
+rotated_image = imrotate(image, 45);
+FileName = fullfile(folder, 'rotated_image.jpg');
 imwrite(rotated_image,FileName)
 % Horizontal flip
-h_flip_image = flip(image_to_be_modified, 2);
-FileName = fullfile(folder, 'Hflip_10.jpg');
+h_flip_image = flip(image, 2);
+FileName = fullfile(folder, 'Hflip.jpg');
 imwrite(h_flip_image,FileName)
 % Vertical flip
-v_flip_image = flip(image_to_be_modified, 1);
-FileName = fullfile(folder, 'Vflip_10.jpg');
+v_flip_image = flip(image, 1);
+FileName = fullfile(folder, 'Vflip.jpg');
 imwrite(v_flip_image,FileName)
 % Shrink contrast by adjusting intensity values
 low_in = 0.2;
 high_in = 0.8;
-contrast_image = imadjust(image_to_be_modified, [low_in high_in], []);
-FileName = fullfile(folder, 'Contrastimage_10.jpg');
-imwrite(contrast_image,FileName)
+contrast_image = imadjust(image, [low_in high_in], []);
+FileName = fullfile(folder, 'Vflip.jpg');
+imwrite(v_flip_image,FileName)
 end
