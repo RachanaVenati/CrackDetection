@@ -2,20 +2,20 @@ function CrackDetection
 clc;
 clear all;
 close all;
-image_input=imread("/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/test_images/crack_10.jpg");%reading image input
-rotate_Flip_ContrastShrunk_Brightness_Shifted(image_input)
-preproc_image=preprocessing(image_input);%preprocessing for contrast streching.
-binaryimage=imageThresholding(preproc_image);%task 2a)adaptive thresholding (binary image).
-morph_image=imageMorphology(binaryimage);
-labeled_img=ConnectedComponentAnalysis(morph_image);
-
+% image_input=imread("/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_1.jpg");%reading image input
+% number_of_annotated_pixels('/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_10.png')
+% 
+% %rotate_Flip_ContrastShrunk_Brightness_Shifted(image_input)
+% preproc_image=preprocessing(image_input);%preprocessing for contrast streching.
+% binaryimage=imageThresholding(preproc_image);%task 2a)adaptive thresholding (binary image).
+% morph_image=imageMorphology(binaryimage);
+% labeled_img=ConnectedComponentAnalysis(morph_image);
+% 
 image_paths = {
-    '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_1.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_3.jpeg'
-};
+    '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_1.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_3.jpeg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_4.jpeg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_5.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_6.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_7.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_8.jpeg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/test_images/crack_9.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/test_images/crack_10.jpg'};
 ground_truth_paths = {
-    '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_1.png', '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_3.png'
+    '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_1.png', '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_3.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_3.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_4.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_5.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_6.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_7.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_8.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_9.png','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_10.png'
 };
-
 crack_detection_pipeline(image_paths,ground_truth_paths);
 end
 
@@ -113,13 +113,10 @@ function [relabel_img, num_labels] = relabelComponents(label_img)
 end
 function crack_detection_pipeline(image_paths, ground_truth_paths)
     % Define a fixed size for all images
-    fixed_size = [256, 256]; % Example size, change as needed
-    
+    fixed_size = [256, 256];
     num_images = length(image_paths);
-    num_train_images = 1; % Adjust this number as needed
+    num_train_images = 8; 
     num_test_images = num_images - num_train_images;
-    
-    % Initialize feature vectors and labels for training
     feature_vectors = [];
     labels = [];
     
@@ -127,11 +124,8 @@ function crack_detection_pipeline(image_paths, ground_truth_paths)
     for i = 1:num_train_images
         image_input = imread(image_paths{i});
         ground_truth = imread(ground_truth_paths{i});
-        
-        % Resize images to fixed size
         image_input = imresize(image_input, fixed_size);
         ground_truth = imresize(ground_truth, fixed_size);
-        
         preproc_image = preprocessing(image_input);
         binaryimage = imageThresholding(preproc_image);
         morph_image = imageMorphology(binaryimage);
@@ -257,10 +251,6 @@ function [feature_vectors, labels] = extract_features(label_matrix, ground_truth
         labels = [labels; label];
     end
     
-    % Check if both classes (1 and 0) are present in the labels
-    if length(unique(labels)) < 2
-        error('Both classes (crack and no-crack) must be present in the labels.');
-    end
 end
 
 function iouCrack = calculate_iou(ground_truth, finalBinaryImage)
@@ -325,4 +315,9 @@ high_in = 0.8;
 contrast_image = imadjust(image_to_be_modified, [low_in high_in], []);
 FileName = fullfile(folder, 'Contrastimage_10.jpg');
 imwrite(contrast_image,FileName)
+end
+function number_of_annotated_pixels(image)
+binary_mask = imbinarize(imread(image));
+annotated_pixels = sum(binary_mask(:) == 1);
+fprintf('Number of annotated pixels: %d\n', annotated_pixels);
 end
