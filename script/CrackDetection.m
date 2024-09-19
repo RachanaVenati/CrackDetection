@@ -2,15 +2,6 @@ function CrackDetection
 clc;
 clear all;
 close all;
-% image_input=imread("/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_1.jpg");%reading image input
-% number_of_annotated_pixels('/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/ground_truths/crack_10.png')
-% 
-% %rotate_Flip_ContrastShrunk_Brightness_Shifted(image_input)
-% preproc_image=preprocessing(image_input);%preprocessing for contrast streching.
-% binaryimage=imageThresholding(preproc_image);%task 2a)adaptive thresholding (binary image).
-% morph_image=imageMorphology(binaryimage);
-% labeled_img=ConnectedComponentAnalysis(morph_image);
-% 
 image_paths = {
     '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_1.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_3.jpeg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_4.jpeg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_5.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_6.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_7.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/training_images/crack_8.jpeg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/test_images/crack_9.jpg','/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/test_images/crack_10.jpg'};
 ground_truth_paths = {
