@@ -9,7 +9,6 @@ ground_truth_paths = {
 };
 crack_detection_pipeline(image_paths,ground_truth_paths);
 end
-
 function prepro_img=preprocessing(image_input)
 grayscaled_img=rgb2gray(image_input);%converting input image to grayscaled image
 min_intensity=double(min(min(grayscaled_img)));
@@ -21,7 +20,6 @@ imshow(streched_image);
 title("Contrast streched image");
 
 end
-
 function Binary_image = imageThresholding(image)%task 2a.)thresholding
     blockSize = 15; 
     C = 20;
@@ -33,8 +31,7 @@ function Binary_image = imageThresholding(image)%task 2a.)thresholding
     imshow(Binary_image);
     title("Thresholding Result");
 end
-
-function morphlogical_img= imageMorphology(image)
+function morphlogical_img= imageMorphology(image)%task 2b.)Morphology
 dilate=strel('square',1);
 erode=strel('disk',0);
 close=strel('cube',1);
@@ -49,8 +46,7 @@ figure;
 imshow(morphlogical_img);
 title("Image after Morphology");
 end
-
-function labeled_img = ConnectedComponentAnalysis(binary_image)
+function labeled_img = ConnectedComponentAnalysis(binary_image)%task 2c.)connected component analysis
     [rows, cols] = size(binary_image);
     labeled_img = zeros(rows, cols);
     
@@ -92,8 +88,52 @@ function labeled_img = ConnectedComponentAnalysis(binary_image)
     imshow(label2rgb(labeled_img));
     title('Connected Components Labeled Image');
 end
-
+function [feature_vectors, labels] = extract_features(label_matrix, ground_truth, preproc_image)%task 2d.)feature engineering.
+    % Convert ground truth to grayscale if it's an RGB image
+    if size(ground_truth, 3) == 3
+        ground_truth = rgb2gray(ground_truth);
+    end
+    
+    % Convert ground truth to binary image (if needed)
+    ground_truth = imbinarize(ground_truth);
+    
+    stats = regionprops(label_matrix, preproc_image, 'Area', 'Perimeter', 'Eccentricity', ...
+        'MajorAxisLength', 'MinorAxisLength', 'ConvexArea');
+    
+    feature_vectors = [];
+    labels = [];
+    
+    for i = 1:max(label_matrix(:))
+        % Extract features
+        area = stats(i).Area;
+        perimeter = stats(i).Perimeter;
+        eccentricity = stats(i).Eccentricity;
+        circularity = (4 * pi * area) / (perimeter^2);
+        aspect_ratio = stats(i).MajorAxisLength / stats(i).MinorAxisLength;
+        solidity = area / stats(i).ConvexArea;
+        
+        % Create a feature vector for this region
+        feature_vector = [area, perimeter, eccentricity, circularity, aspect_ratio, solidity];
+        feature_vectors = [feature_vectors; feature_vector];
+        
+        % Determine label based on ground truth overlap
+        region_mask = (label_matrix == i);
+        %disp(['Size of region_mask: ', num2str(size(region_mask))]);
+        region_area_ground_truth = sum(ground_truth(region_mask));  % Ground truth is now binary
+       % disp(['Size of ground_truth: ', num2str(size(ground_truth))]);
+        
+        if region_area_ground_truth > 0
+            label = 1; % For crack
+        else
+            label = 0; % No crack
+        end
+        
+        labels = [labels; label];
+    end
+    
+end
 function [relabel_img, num_labels] = relabelComponents(label_img)
+
     unique_labels = unique(label_img(label_img > 0));
     num_labels = length(unique_labels);
     relabel_img = zeros(size(label_img));
@@ -102,7 +142,7 @@ function [relabel_img, num_labels] = relabelComponents(label_img)
         relabel_img(label_img == unique_labels(i)) = i;
     end
 end
-function crack_detection_pipeline(image_paths, ground_truth_paths)
+function crack_detection_pipeline(image_paths, ground_truth_paths)%task 2e.)Classifier
     % Define a fixed size for all images
     fixed_size = [256, 256];
     num_images = length(image_paths);
@@ -164,9 +204,8 @@ function crack_detection_pipeline(image_paths, ground_truth_paths)
         disp(['IoU for Crack on Image ', num2str(i), ': ', num2str(iouCrack)]);
     end
 end
-
-function svm_model = svm_classifier(feature_vectors, labels)
-    % Ensure the labels array is not empty and contains both classes
+function svm_model = svm_classifier(feature_vectors, labels)%task 2e.)Classifier
+   
     if isempty(labels)
         error('The labels array is empty.');
     end
@@ -199,52 +238,7 @@ function svm_model = svm_classifier(feature_vectors, labels)
     
     
 end
-function [feature_vectors, labels] = extract_features(label_matrix, ground_truth, preproc_image)
-    % Convert ground truth to grayscale if it's an RGB image
-    if size(ground_truth, 3) == 3
-        ground_truth = rgb2gray(ground_truth);
-    end
-    
-    % Convert ground truth to binary image (if needed)
-    ground_truth = imbinarize(ground_truth);
-    
-    stats = regionprops(label_matrix, preproc_image, 'Area', 'Perimeter', 'Eccentricity', ...
-        'MajorAxisLength', 'MinorAxisLength', 'ConvexArea');
-    
-    feature_vectors = [];
-    labels = [];
-    
-    for i = 1:max(label_matrix(:))
-        % Extract features
-        area = stats(i).Area;
-        perimeter = stats(i).Perimeter;
-        eccentricity = stats(i).Eccentricity;
-        circularity = (4 * pi * area) / (perimeter^2);
-        aspect_ratio = stats(i).MajorAxisLength / stats(i).MinorAxisLength;
-        solidity = area / stats(i).ConvexArea;
-        
-        % Create a feature vector for this region
-        feature_vector = [area, perimeter, eccentricity, circularity, aspect_ratio, solidity];
-        feature_vectors = [feature_vectors; feature_vector];
-        
-        % Determine label based on ground truth overlap
-        region_mask = (label_matrix == i);
-        %disp(['Size of region_mask: ', num2str(size(region_mask))]);
-        region_area_ground_truth = sum(ground_truth(region_mask));  % Ground truth is now binary
-       % disp(['Size of ground_truth: ', num2str(size(ground_truth))]);
-        
-        if region_area_ground_truth > 0
-            label = 1; % For crack
-        else
-            label = 0; % No crack
-        end
-        
-        labels = [labels; label];
-    end
-    
-end
-
-function iouCrack = calculate_iou(ground_truth, finalBinaryImage)
+function iouCrack = calculate_iou(ground_truth, finalBinaryImage)%task 3a.)iou calculation.
     fixed_size = [256, 256];
     if size(ground_truth, 3) == 3
         ground_truth = rgb2gray(ground_truth);
@@ -262,14 +256,14 @@ function iouCrack = calculate_iou(ground_truth, finalBinaryImage)
     crack_lengths = crackLengths(finalBinaryImage_b);
     iouCrack = intersectionCrack / unionCrack;
 end
-function thinned_image = imageThinning(binary_image)
+function thinned_image = imageThinning(binary_image)%task 3b.)Thinning
     % Perform thinning to reduce the segmentation result to a line-like representation
     thinned_image = bwmorph(binary_image, 'thin', inf);
     figure;
     imshow(thinned_image);
     title('Thinned Image');
 end
-function crack_lengths = crackLengths(thinned_image)
+function crack_lengths = crackLengths(thinned_image)%task 3c.)crack lengths
     % Compute the length of each detected crack
     stats = regionprops(thinned_image, 'PixelIdxList');
     crack_lengths = zeros(length(stats), 1);
@@ -286,7 +280,7 @@ function crack_lengths = crackLengths(thinned_image)
         fprintf('Crack %d Length: %.2f pixels\n', i, crack_lengths(i));
     end
 end
-function rotate_Flip_ContrastShrunk_Brightness_Shifted(image_to_be_modified)
+function rotate_Flip_ContrastShrunk_Brightness_Shifted(image_to_be_modified)%task 1e.)Rotation,Fliping,Contrastshrink
 folder = '/Users/rachanavenatiicloud.com/Crack_detection/CrackDetection/Rotated_flipped_contrasted_images';
 % Rotate the image by 45 degrees
 rotated_image = imrotate(image_to_be_modified, 45);
@@ -307,7 +301,7 @@ contrast_image = imadjust(image_to_be_modified, [low_in high_in], []);
 FileName = fullfile(folder, 'Contrastimage_10.jpg');
 imwrite(contrast_image,FileName)
 end
-function number_of_annotated_pixels(image)
+function number_of_annotated_pixels(image)%task 1d.)pixels annotated
 binary_mask = imbinarize(imread(image));
 annotated_pixels = sum(binary_mask(:) == 1);
 fprintf('Number of annotated pixels: %d\n', annotated_pixels);
