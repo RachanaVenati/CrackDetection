@@ -1,37 +1,69 @@
 # CrackDetection
-Detection of cracks on walls using concepts of image analysis.
 
-----------------------------------------------------------------------------
-# Task A – Data Engineering
-Data is the fuel for nearly any kind of image-based detection challenge nowadays. If not used for training (i.e.
-the learning of suitable model parameters), a dataset must be present at least for evaluating the
-performance of a proposed approach. Thus, the acquisition and preparation of data forms a vital step in
-designing and developing a detection system.
-# a) Data acquisition
-# b) Data annotation 
-# c) Data split
-# d) Data augmentation
-# e) Datasets statistics
+Detection of cracks on walls using image analysis concepts, implemented in MATLAB.
 
-----------------------------------------------------------------------------
-# Task B – Crack Segmentation
-In this task you propose an approach to semantically segment the cracks in the image. Semantic
-segmentation is the task where every pixel in the input image is assigned a class label in the output. Crack
-segmentation is a binary task with the classes no-crack and crack. As shown in Figure 1, it is
-recommended to use value 0 for no-crack and 255 for crack.
-# a) Thresholding.
-# b) Morphological operators will clean up images.
-# c) Extract discrete regions by implementing connected component analysis.
-# d) Feature engineering.
-# e) Classifier: Implemented support vector machines (SVM).
+Overview
 
-----------------------------------------------------------------------------
-# Task C – Crack Analytics
-Crack segmentation unfolds its power only when the results undergo further processing. Information such as
-the length or the number of branches of a crack are crucial for the assessment of a structure’s condition.
-# a) Implement a metric to assess the performance of the implemented approach. 
-The standard metric for semantic segmentation is intersection-over-union (IoU). Report the performance of the detector
-on the test set and discuss the adequacy of the metric for crack detection.
-# b) Thinning in order to reduce the segmentation results to a line-like representation of the crack.
-# c) Implement a function to compute the length of the detected cracks in the test set.
-# d) Comment on the usefulness of the implemented approach for practical crack detection.
+CrackDetection is a compact MATLAB-based project that demonstrates a pipeline for detecting and analyzing cracks in images of wall surfaces. The repository contains code for preparing imagery, segmenting cracks, extracting structural features, and computing simple analytics such as crack length.
+
+Why this project
+
+- Structural inspection often requires quick, automated detection of surface cracks to prioritize maintenance and safeguard structures.
+- This project demonstrates image-processing techniques (thresholding, morphological operations, connected-component analysis) and a classical classifier (SVM) as a lightweight alternative to deep learning approaches when dataset size or compute resources are limited.
+
+Key features
+
+- Data handling: scripts for splitting datasets and basic augmentation to improve robustness.
+- Crack segmentation: pixel-wise segmentation using thresholding, morphological cleanup, and connected-component analysis.
+- Feature extraction and classification: handcrafted features and SVM-based classification.
+- Crack analytics: thinning/skeletonization to measure crack length and analyze branching patterns.
+
+Repository structure
+
+- README.md                  : Project overview and usage notes
+- data/                       : (Recommended) place your images and annotations here
+- scripts/                    : MATLAB scripts to run preprocessing, training, and evaluation
+- src/                        : Core MATLAB functions for segmentation, feature extraction, and analytics
+- results/                    : Output segmentation masks and analytics reports
+
+Methodology (high level)
+
+1. Data engineering: acquire, annotate, split, and augment images to build training/test sets.
+2. Segmentation: apply intensity thresholding + morphological operators to produce binary crack masks.
+3. Post-processing: connected-component analysis to filter noise and extract contiguous crack regions.
+4. Feature engineering: compute region-level features and train an SVM classifier to distinguish crack vs. non-crack regions.
+5. Analytics: thin masks to skeletons and estimate crack length and branching for structural assessment.
+
+Getting started (requirements)
+
+- MATLAB (2018b or later recommended)
+- Image Processing Toolbox
+
+Quick run
+
+1. Place your images and ground-truth masks under the `data/` folder.
+2. Open MATLAB and add the repository to your path (e.g., `addpath(genpath('path/to/CrackDetection'))`).
+3. Run the main pipeline script: `scripts/run_pipeline.m` (this script orchestrates preprocessing, training, and evaluation).
+
+Notes on results and evaluation
+
+- The repository includes code to compute standard segmentation metrics such as Intersection-over-Union (IoU). For crack detection, also consider length-based metrics and the accuracy of skeletonization for downstream analytics.
+- This implementation focuses on clarity and reproducibility rather than state-of-the-art performance. To improve results, consider adding more data, refining feature sets, or adopting deep learning segmentation models.
+
+What I changed (for a LinkedIn-ready update)
+
+- Polished the README to present the project clearly for a professional audience, highlighting objectives, methods, and how to run the code.
+
+Contributing
+
+Contributions and improvements are welcome. Open an issue or submit a pull request with proposed changes.
+
+License
+
+Include your preferred license here (e.g., MIT). If you don't have one yet, add a LICENSE file to this repo.
+
+Contact
+
+Maintainer: RachanaVenati
+GitHub: https://github.com/RachanaVenati/CrackDetection
+
